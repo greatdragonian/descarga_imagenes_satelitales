@@ -23,14 +23,13 @@ def remove_prefix(string, prefix="/eodata/"):
 def extract_imagename(path, pattern=r"(S2[AB]_MSI.{3}_\d+T\d+_N\d+_R\d+_T[a-zA-Z0-9]+)"):
     '''
     Extracts an imagename from a given path using a regular expression.
-    The pattern currently matches only
-    Sentinel 2 images.
+    The pattern currently matches only Sentinel 2 images.
     
     Raises ValueError if no match is found for the pattern in the provided path.
 
     Parameters:
     path (str): The full path of the file.
-    patter: (regex): Regex that matches the imagename contained in the file path.
+    pattern: (regex): Regex that matches the imagename contained in the file path.
 
     Returns:
     str: The part of the path that matches the pattern.
