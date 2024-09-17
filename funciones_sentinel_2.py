@@ -17,15 +17,20 @@ def remove_prefix(string, prefix="/eodata/"):
     '''
     
     if string.startswith(prefix):
-        return string[len(prefix):]
+        string = string[len(prefix):]
     return string
 
 def extract_imagename(path, pattern=r"(S2[AB]_MSI.{3}_\d+T\d+_N\d+_R\d+_T[a-zA-Z0-9]+)"):
     '''
     Extracts an imagename from a given path using a regular expression.
+    The pattern currently matches only
+    Sentinel 2 images.
+    
+    Raises ValueError if no match is found for the pattern in the provided path.
 
     Parameters:
     path (str): The full path of the file.
+    patter: (regex): Regex that matches the imagename contained in the file path.
 
     Returns:
     str: The part of the path that matches the pattern.
@@ -44,7 +49,7 @@ def download(bucket, product, target=""):
     '''
     Downloads every file in bucket with provided product as prefix
 
-    Raises FileNotFoundError if the product was not found
+    Raises FileNotFoundError if no file was found
 
     Parameters:
     bucket (object): boto3 Resource bucket object
@@ -54,7 +59,7 @@ def download(bucket, product, target=""):
     
     files = bucket.objects.filter(Prefix=product)
     if not list(files):
-        raise FileNotFoundError(f"Could not find any files for {product}")
+        raise FileNotFoundError(f"No se encontraron archivos para {product}")
     
     for file in files:
         
@@ -63,17 +68,16 @@ def download(bucket, product, target=""):
         imagepath = os.path.join(target, imagename)
         os.makedirs(imagepath, exist_ok=True)
         
-        # Creating filename:
+        # Downloading file:
         filename = os.path.basename(file.key)
-        
-        if not os.path.isdir(file.key):
-            #print(file.key)
-            bucket.download_file(file.key, os.path.join(imagepath, filename))
+        bucket.download_file(file.key, os.path.join(imagepath, filename))
 
-def get_copernicus_image_metadata(start_date, end_date, polygon, collection, cloud_cover=None, product_type=None, srid="4326"): 
+def get_copernicus_image_metadata(start_date, end_date, polygon,
+    collection, cloud_cover=None, product_type=None, srid="4326"): 
     '''
-    Creates a Pandas DataFrame containing the metadata for Copernicus images intersecting a given polygon
-    within a specified date range. This data frame can then be used to download the corresponding images.
+    Creates a Pandas DataFrame containing the metadata for Copernicus images
+    intersecting a given polygon within a specified date range.
+    This data frame can then be used to download the corresponding images.
 
     Parameters:
     start_date (str): The start date for the query (format: "2024-04-30T00:00:00.000Z").
@@ -81,10 +85,10 @@ def get_copernicus_image_metadata(start_date, end_date, polygon, collection, clo
     polygon (str): The polygon coordinates in "longitude latitude" format, comma-separated.
     collection (str): The name of the collection (e.g., "Sentinel-1").
     cloud_cover (2 digit int): Maximum allowable cloud cover percentage (optional).
-    product_type (str): Desired product_type of the products (optional). Example: "S2MSI2A"
-    srid (str): The Spatial Reference System Identifier (default is "4326" and cannot be changed at the moment).
-    target_directory (str): The local directory where images will be downloaded.
-        
+    product_type (str): Desired product_type (optional). Example: "S2MSI2A"
+    srid (str): The Spatial Reference System Identifier (default is "4326" and
+    cannot be changed at the moment).
+    
     Returns:
     Pandas DataFrame: df containing the metadata of the found images.
     '''
@@ -112,7 +116,6 @@ def get_copernicus_image_metadata(start_date, end_date, polygon, collection, clo
     
     # Perform the query and get the JSON response
     json_response = requests.get(query_url).json()
-    # print(json_response)
     
     # Create a Pandas DataFrame from the JSON response
     df = pd.DataFrame.from_dict(json_response["value"])
@@ -125,8 +128,8 @@ def get_copernicus_image_metadata(start_date, end_date, polygon, collection, clo
 
 def download_copernicus_images(s3, df, start_row=0, target_directory=""):
     '''
-    Downloads images from Copernicus based on the S3 paths in the DataFrame created using the
-    get_copernicus_image_metadata() function.
+    Downloads images from Copernicus based on the S3 paths in the DataFrame
+    created using the get_copernicus_image_metadata() function.
     
     Parameters:
     s3 (boto3.resource): The boto3 S3 resource object
@@ -142,4 +145,3 @@ def download_copernicus_images(s3, df, start_row=0, target_directory=""):
             download(s3.Bucket("eodata"), s3path, target=target_directory)
         except Exception as e:
             print(f"Error al descargar {s3path}: {e}")
-
